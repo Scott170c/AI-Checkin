@@ -13,21 +13,28 @@ def home():
 
     if request.method == 'POST':
         option = request.form.get('option')
+        id = request.form.get('id', '')
 
         if option == '1':
-            custom_id = request.form.get('custom_id', '')
             name = request.form.get('name', '')
-            if custom_id == '':
+            if id == '':
                 c.execute('''SELECT MAX(id) FROM member''')
-                max_id = c.fetchone()[0] + 1 if c.fetchone()[0] else 1
+                max_id = c.fetchone()[0] + 1
+                c.execute('INSERT INTO member VALUES (?, ?, ?)', (max_id, name, current_date))
+                message = "Member added successfully."
             else:
-                max_id = int(custom_id)
-            c.execute('INSERT INTO member VALUES (?, ?, ?)', (max_id, name, current_date))
-            message = "Member added successfully."
+                max_id = int(id)
+                # If found same id, quit. else, continue
+                member = c.execute(f'''SELECT * FROM member WHERE id = {max_id}''')
+                member = member.fetchone()
+                if member:
+                    message = "ID "
+                else:
+                    c.execute('INSERT INTO member VALUES (?, ?, ?)', (max_id, name, current_date))
+                    message = "Member added successfully."
 
         elif option == '2':
-            member_id = request.form.get('member_id', '')
-            c.execute('DELETE FROM member WHERE id = ?', (member_id,))
+            c.execute('DELETE FROM member WHERE id = ?', (id,))
             message = "Member deleted successfully."
 
         elif option == '3':
@@ -65,16 +72,12 @@ def home():
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="custom_id">Custom ID (for adding):</label>
-                    <input type="text" class="form-control" id="custom_id" name="custom_id">
+                    <label for="id">ID:</label>
+                    <input type="text" class="form-control" id="id" name="id">
                 </div>
                 <div class="form-group">
                     <label for="name">Name (for adding):</label>
                     <input type="text" class="form-control" id="name" name="name">
-                </div>
-                <div class="form-group">
-                    <label for="member_id">Member ID (for deleting):</label>
-                    <input type="text" class="form-control" id="member_id" name="member_id">
                 </div>
                 <button type="submit" class="btn btn-primary">Submit</button>
             </form>
@@ -92,7 +95,6 @@ def home():
     </body>
     </html>
     """, message=message, members_today=members_today, all_members=all_members)
-
 
 if __name__ == '__main__':
     app.run(debug=True)
